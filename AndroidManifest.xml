@@ -26,6 +26,12 @@
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"/>
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
 
+    <!-- To listen to UX restriction events -->
+    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN"/>
+
+    <!-- To show the exited setup notification -->
+    <uses-permission android:name="android.permission.SEND_CATEGORY_CAR_NOTIFICATIONS"/>
+
     <application android:label="@string/app_name">
 
         <activity android:name="DefaultActivity"

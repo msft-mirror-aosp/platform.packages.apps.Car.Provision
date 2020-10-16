@@ -39,7 +39,7 @@
             android:id="@+id/error_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
-  </LinearLayout>
+    </LinearLayout>
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
@@ -50,11 +50,6 @@
             android:layout_height="wrap_content"
             android:text="@string/set_do"
             android:enabled="false"/>
-        <Button
-            android:id="@+id/cancel_setup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/cancel_setup"/>
         <Button
             android:id="@+id/finish_setup"
             android:layout_width="wrap_content"
