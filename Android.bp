@@ -15,6 +15,12 @@
 android_app {
     name: "CarProvision",
     srcs: ["**/*.java"],
+    libs: [
+        "android.car-stubs",
+    ],
+    static_libs: [
+        "car-setup-wizard-lib",
+    ],
     platform_apis: true,
     system_ext_specific: true,
     certificate: "platform",

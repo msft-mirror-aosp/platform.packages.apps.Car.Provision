@@ -18,11 +18,13 @@
     <string name="app_name" translatable="false">Reference Setup Wizard for Cars</string>
     <string name="description" translatable="false">This app is used to emulate a Setup Wizard.\n
     \n
-    It is integrated with car-specific features (such as deferred setup and user notice service)
+    It\'s integrated with car-specific features (such as exiting setup when car moves)
     plus a UI where the user can emulate setup-time options like provisioning a Device Owner.
     </string>
     <string name="error_prompt" translatable="false">Error:</string>
-    <string name="cancel_setup" translatable="false">Cancel Setup</string>
     <string name="finish_setup" translatable="false">Finish Setup</string>
     <string name="set_do" translatable="false">Set Device Owner</string>
+    <string name="exited_setup_title" translatable="false">Setup Exited</string>
+    <string name="exited_setup_content" translatable="false">Don\'t worry, this is just a friendly
+    FYI, there\'s nothing to do, you are good to go.\nHave fun!</string>
 </resources>
