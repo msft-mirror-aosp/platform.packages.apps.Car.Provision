@@ -209,7 +209,7 @@ public final class DefaultActivity extends Activity {
     }
 
     private void exitSetup() {
-        Log.d(TAG, "exitSetup()");
+        Log.d(TAG, "exiting setup early for user " + getUserId());
         provisionUserAndDevice();
         notifySetupExited();
         disableSelfAndFinish();
@@ -274,7 +274,7 @@ public final class DefaultActivity extends Activity {
             return;
         }
         Log.i(TAG, "Device owner  mode provisioned, nothing left to do...");
-        disableSelfAndFinish();
+        finishSetup();
     };
 
     private static String resultCodeToString(int resultCode)  {
