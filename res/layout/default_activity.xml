@@ -72,5 +72,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/finish_setup"/>
+        <Button
+            android:id="@+id/factory_reset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/factory_reset"/>
     </LinearLayout>
 </LinearLayout>

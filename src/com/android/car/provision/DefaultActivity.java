@@ -24,6 +24,7 @@ import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_TRIGGER;
 import static android.app.admin.DevicePolicyManager.PROVISIONING_TRIGGER_QR_CODE;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -94,6 +95,7 @@ public final class DefaultActivity extends Activity {
 
     private TextView mErrorsTextView;
     private Button mFinishSetupButton;
+    private Button mFactoryResetButton;
     private Button mDoProvisioningLegacyWorkflowButton;
     private Button mDoProvisioningButton;
 
@@ -122,10 +124,12 @@ public final class DefaultActivity extends Activity {
 
         mErrorsTextView = findViewById(R.id.error_message);
         mFinishSetupButton = findViewById(R.id.finish_setup);
+        mFactoryResetButton = findViewById(R.id.factory_reset);
         mDoProvisioningLegacyWorkflowButton = findViewById(R.id.legacy_do_provisioning);
         mDoProvisioningButton = findViewById(R.id.do_provisioning);
 
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
+        mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
         setDoProvisioning();
         startMonitor();
@@ -208,6 +212,22 @@ public final class DefaultActivity extends Activity {
         Log.i(TAG, "finishing setup for user " + getUserId());
         provisionUserAndDevice();
         disableSelfAndFinish();
+    }
+
+    private void factoryReset() {
+        new AlertDialog.Builder(this).setMessage(R.string.factory_reset_warning)
+            .setPositiveButton(android.R.string.ok, (d, w)->sendFactoryResetIntent())
+            .show();
+    }
+
+    private void sendFactoryResetIntent() {
+        Intent intent = new Intent(Intent.ACTION_FACTORY_RESET);
+        intent.setPackage("android");
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        intent.putExtra(Intent.EXTRA_REASON, "Requested by user on SUW");
+
+        Log.i(TAG, "factory resetting device with intent " + intent);
+        sendBroadcast(intent);
     }
 
     private void provisionUserAndDevice() {
@@ -301,22 +321,30 @@ public final class DefaultActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "onActivityResult(): request=" + requestCode + ", result=" + resultCode
                 + ", data=" + data);
+        StringBuilder error = new StringBuilder();
         if (requestCode != REQUEST_CODE_SET_DO) {
-            showErrorMessage("onActivityResult(): got invalid request code " + requestCode);
+            error.append("onActivityResult(): got invalid request code ").append(requestCode);
+        } else if (resultCode != Activity.RESULT_OK) {
+            error.append("onActivityResult(): got invalid result code ").append(resultCode);
+        }
+        if (error.length() > 0) {
+            error.append('\n').append(getString(R.string.do_failure_message));
+            showErrorMessage(error.toString());
             return;
         }
-        if (resultCode != Activity.RESULT_OK) {
-            String warning = getString(R.string.do_failure_message);
-            showErrorMessage("onActivityResult(): got invalid result code "
-                    + resultCodeToString(resultCode) + "\n" + warning);
-             // TODO(b/170333009): add a button to factory reset
-            return;
-        }
-        Log.i(TAG, "Device owner mode provisioned, nothing left to do...");
+
+        Log.i(TAG, "Device owner mode provisioned!");
         finishSetup();
-        // TODO(b/170333009): must call ManagedProvisioning again with intent with
-        // PROVISION_FINALIZATION_INSIDE_SUW action and DEFAULT category.
-    };
+        finalizeDpc();
+    }
+
+    private void finalizeDpc() {
+        // TODO(b/170333009): use proper constant for intent action
+        Intent intent = new Intent("android.app.action.PROVISION_FINALIZATION_INSIDE_SUW")
+                .addCategory(Intent.CATEGORY_DEFAULT);
+        Log.i(TAG, "Finalizing DPC with " + intent);
+        startActivity(intent);
+    }
 
     private static String resultCodeToString(int resultCode)  {
         switch (resultCode) {
