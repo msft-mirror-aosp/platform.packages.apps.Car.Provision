@@ -44,16 +44,38 @@
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
                   android:orientation="horizontal" >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="50dp"
+            android:text="@string/set_do"/>
+        <Button
+            android:id="@+id/legacy_do_provisioning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/legacy_do_workflow"
+            android:enabled="false"/>
         <Button
             android:id="@+id/do_provisioning"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/set_do"
+            android:text="@string/do_workflow"
             android:enabled="false"/>
+    </LinearLayout>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                  android:layout_marginTop="50dp"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:orientation="horizontal" >
         <Button
             android:id="@+id/finish_setup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/finish_setup"/>
-  </LinearLayout>
+        <Button
+            android:id="@+id/factory_reset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/factory_reset"/>
+    </LinearLayout>
 </LinearLayout>

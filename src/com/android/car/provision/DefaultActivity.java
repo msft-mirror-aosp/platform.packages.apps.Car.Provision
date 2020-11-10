@@ -16,7 +16,15 @@
 
 package com.android.car.provision;
 
+import static android.app.admin.DevicePolicyManager.ACTION_PROVISION_MANAGED_DEVICE_FROM_TRUSTED_SOURCE;
+import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME;
+import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION;
+import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM;
+import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_TRIGGER;
+import static android.app.admin.DevicePolicyManager.PROVISIONING_TRIGGER_QR_CODE;
+
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -58,7 +66,7 @@ public final class DefaultActivity extends Activity {
 
     static final String TAG = "CarProvision";
 
-    // TODO(b/171066617): copied from android.car.settings.CarSettings, as they're hidden
+    // TODO(b/170333009): copied from android.car.settings.CarSettings, as they're hidden
     private static final String KEY_ENABLE_INITIAL_NOTICE_SCREEN_TO_USER =
             "android.car.ENABLE_INITIAL_NOTICE_SCREEN_TO_USER";
     private static final String KEY_SETUP_WIZARD_IN_PROGRESS =
@@ -69,18 +77,26 @@ public final class DefaultActivity extends Activity {
     private static final int NOTIFICATION_ID = 108;
     private static final String IMPORTANCE_DEFAULT_ID = "importance_default";
 
-    private static final Map<String, String> sSupportedDpcApps = new HashMap<>(1);
+    private static final Map<String, DpcInfo> sSupportedDpcApps = new HashMap<>(1);
 
     static {
-        // TODO(b/170143095): add a UI with multiple options once AAOS provides a CarTestDPC app.
-        sSupportedDpcApps.put("com.afwsamples.testdpc",
-                "com.afwsamples.testdpc.SetupManagementLaunchActivity");
+        // TODO(b/170333009): add a UI with multiple options once AAOS provides a CarTestDPC app.
+        DpcInfo testDpc = new DpcInfo("TestDPC",
+                "com.afwsamples.testdpc",
+                "com.afwsamples.testdpc.SetupManagementLaunchActivity",
+                "com.afwsamples.testdpc.DeviceAdminReceiver",
+                // TODO(b/170333009): add UI to set checkSum for local built app
+                "gJD2YwtOiWJHkSMkkIfLRlj-quNqG1fb6v100QmzM9w=",
+                "https://testdpc-latest-apk.appspot.com/preview");
+        sSupportedDpcApps.put(testDpc.name, testDpc);
     }
 
     private CarDrivingStateMonitor mCarDrivingStateMonitor;
 
     private TextView mErrorsTextView;
     private Button mFinishSetupButton;
+    private Button mFactoryResetButton;
+    private Button mDoProvisioningLegacyWorkflowButton;
     private Button mDoProvisioningButton;
 
     private final BroadcastReceiver mDrivingStateExitReceiver = new BroadcastReceiver() {
@@ -108,9 +124,12 @@ public final class DefaultActivity extends Activity {
 
         mErrorsTextView = findViewById(R.id.error_message);
         mFinishSetupButton = findViewById(R.id.finish_setup);
+        mFactoryResetButton = findViewById(R.id.factory_reset);
+        mDoProvisioningLegacyWorkflowButton = findViewById(R.id.legacy_do_provisioning);
         mDoProvisioningButton = findViewById(R.id.do_provisioning);
 
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
+        mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
         setDoProvisioning();
         startMonitor();
@@ -159,6 +178,9 @@ public final class DefaultActivity extends Activity {
 
         mDoProvisioningButton.setEnabled(true);
         mDoProvisioningButton.setOnClickListener((v) -> provisionDeviceOwner());
+        mDoProvisioningLegacyWorkflowButton.setEnabled(true);
+        mDoProvisioningLegacyWorkflowButton
+                .setOnClickListener((v) -> provisionDeviceOwnerLegacyWorkflow());
     }
 
     private boolean checkDpcAppExists(String dpcApp) {
@@ -190,6 +212,22 @@ public final class DefaultActivity extends Activity {
         Log.i(TAG, "finishing setup for user " + getUserId());
         provisionUserAndDevice();
         disableSelfAndFinish();
+    }
+
+    private void factoryReset() {
+        new AlertDialog.Builder(this).setMessage(R.string.factory_reset_warning)
+            .setPositiveButton(android.R.string.ok, (d, w)->sendFactoryResetIntent())
+            .show();
+    }
+
+    private void sendFactoryResetIntent() {
+        Intent intent = new Intent(Intent.ACTION_FACTORY_RESET);
+        intent.setPackage("android");
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        intent.putExtra(Intent.EXTRA_REASON, "Requested by user on SUW");
+
+        Log.i(TAG, "factory resetting device with intent " + intent);
+        sendBroadcast(intent);
     }
 
     private void provisionUserAndDevice() {
@@ -232,20 +270,39 @@ public final class DefaultActivity extends Activity {
         notificationMgr.notify(NOTIFICATION_ID, notification);
     }
 
-    private void provisionDeviceOwner() {
-        // TODO(b/170957342): add a UI with multiple options once AAOS provides a CarTestDPC app.
-        String dpcApp = sSupportedDpcApps.keySet().iterator().next();
-        if (!checkDpcAppExists(dpcApp)) {
-            showErrorMessage("Cannot setup DeviceOwner because " + dpcApp + " is not available.\n"
-                    + "Make sure it's installed for both user 0 and user " + getUserId());
+    private void provisionDeviceOwnerLegacyWorkflow() {
+        // TODO(b/170333009): add a UI with multiple options once AAOS provides a CarTestDPC app.
+        DpcInfo dpcInfo = sSupportedDpcApps.values().iterator().next();
+        if (!checkDpcAppExists(dpcInfo.packageName)) {
+            showErrorMessage("Cannot setup DeviceOwner because " + dpcInfo.packageName
+                    + " is not available.\n Make sure it's installed for both user 0 and user "
+                    + getUserId());
             return;
         }
 
         Intent intent = new Intent();
-        Map.Entry<String, String> dpc = sSupportedDpcApps.entrySet().iterator().next();
-        intent.setComponent(new ComponentName(dpc.getKey(), dpc.getValue()));
-        Log.i(TAG, "provisioning device owner, while running as user " + getUserId() + "Intent: "
-                + intent);
+        intent.setComponent(dpcInfo.getLegacyActivityComponentName());
+        Log.i(TAG, "Provisioning device owner using LEGACY workflow while running as user "
+                + getUserId() + ". DPC: " + dpcInfo + ". Intent: " + intent);
+        startActivityForResult(intent, REQUEST_CODE_SET_DO);
+    }
+
+    private void provisionDeviceOwner() {
+        // TODO(b/170333009): add a UI with multiple options once AAOS provides a CarTestDPC app.
+        DpcInfo dpcInfo = sSupportedDpcApps.values().iterator().next();
+
+        Intent intent = new Intent(ACTION_PROVISION_MANAGED_DEVICE_FROM_TRUSTED_SOURCE);
+        // TODO(b/170333009): add a UI with options for EXTRA_PROVISIONING_TRIGGER.
+        intent.putExtra(EXTRA_PROVISIONING_TRIGGER, PROVISIONING_TRIGGER_QR_CODE);
+        intent.putExtra(EXTRA_PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME,
+                dpcInfo.getAdminReceiverComponentName());
+        intent.putExtra(EXTRA_PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM, dpcInfo.checkSum);
+        intent.putExtra(EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION,
+                dpcInfo.downloadUrl);
+
+        Log.i(TAG, "Provisioning device owner using NEW workflow while running as user "
+                + getUserId() + ". DPC: " + dpcInfo + ". Intent: " + intent);
+
         startActivityForResult(intent, REQUEST_CODE_SET_DO);
     }
 
@@ -264,18 +321,30 @@ public final class DefaultActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "onActivityResult(): request=" + requestCode + ", result=" + resultCode
                 + ", data=" + data);
+        StringBuilder error = new StringBuilder();
         if (requestCode != REQUEST_CODE_SET_DO) {
-            showErrorMessage("onActivityResult(): got invalid request code " + requestCode);
+            error.append("onActivityResult(): got invalid request code ").append(requestCode);
+        } else if (resultCode != Activity.RESULT_OK) {
+            error.append("onActivityResult(): got invalid result code ").append(resultCode);
+        }
+        if (error.length() > 0) {
+            error.append('\n').append(getString(R.string.do_failure_message));
+            showErrorMessage(error.toString());
             return;
         }
-        if (resultCode != Activity.RESULT_OK) {
-            showErrorMessage("onActivityResult(): got invalid result code "
-                    + resultCodeToString(resultCode));
-            return;
-        }
-        Log.i(TAG, "Device owner  mode provisioned, nothing left to do...");
+
+        Log.i(TAG, "Device owner mode provisioned!");
         finishSetup();
-    };
+        finalizeDpc();
+    }
+
+    private void finalizeDpc() {
+        // TODO(b/170333009): use proper constant for intent action
+        Intent intent = new Intent("android.app.action.PROVISION_FINALIZATION_INSIDE_SUW")
+                .addCategory(Intent.CATEGORY_DEFAULT);
+        Log.i(TAG, "Finalizing DPC with " + intent);
+        startActivity(intent);
+    }
 
     private static String resultCodeToString(int resultCode)  {
         switch (resultCode) {
