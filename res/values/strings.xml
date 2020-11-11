@@ -23,8 +23,16 @@
     </string>
     <string name="error_prompt" translatable="false">Error:</string>
     <string name="finish_setup" translatable="false">Finish Setup</string>
+    <string name="factory_reset" translatable="false">Factory Reset</string>
     <string name="set_do" translatable="false">Set Device Owner</string>
+    <string name="legacy_do_workflow" translatable="false">Legacy</string>
+    <string name="do_workflow" translatable="false">S+</string>
     <string name="exited_setup_title" translatable="false">Setup Exited</string>
     <string name="exited_setup_content" translatable="false">Don\'t worry, this is just a friendly
     FYI, there\'s nothing to do, you are good to go.\nHave fun!</string>
+    <string name="do_failure_message" translatable="false">Device owner could not be provisioned!\n
+    \nOn a production device, it should trigger a factory reset, but for development purposes, this
+    Setup Wizard is not doing so.</string>
+    <string name="factory_reset_warning" translatable="false">Factory Reset is irreversible, are you
+    sure?</string>
 </resources>

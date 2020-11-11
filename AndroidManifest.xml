@@ -32,6 +32,9 @@
     <!-- To show the exited setup notification -->
     <uses-permission android:name="android.permission.SEND_CATEGORY_CAR_NOTIFICATIONS"/>
 
+    <!-- To start the new DPC provisioning workflow  -->
+    <uses-permission android:name="android.permission.DISPATCH_PROVISIONING_MESSAGE"/>
+
     <application android:label="@string/app_name">
 
         <activity android:name="DefaultActivity"
