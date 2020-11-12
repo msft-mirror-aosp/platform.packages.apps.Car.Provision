@@ -25,6 +25,8 @@ import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_AD
 import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM;
 import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_TRIGGER;
 import static android.app.admin.DevicePolicyManager.PROVISIONING_TRIGGER_QR_CODE;
+import static android.car.settings.CarSettings.Secure.KEY_ENABLE_INITIAL_NOTICE_SCREEN_TO_USER;
+import static android.car.settings.CarSettings.Secure.KEY_SETUP_WIZARD_IN_PROGRESS;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -68,12 +70,6 @@ import java.util.List;
 public final class DefaultActivity extends Activity {
 
     static final String TAG = "CarProvision";
-
-    // TODO(b/170333009): copied from android.car.settings.CarSettings, as they're hidden
-    private static final String KEY_ENABLE_INITIAL_NOTICE_SCREEN_TO_USER =
-            "android.car.ENABLE_INITIAL_NOTICE_SCREEN_TO_USER";
-    private static final String KEY_SETUP_WIZARD_IN_PROGRESS =
-            "android.car.SETUP_WIZARD_IN_PROGRESS";
 
     // TODO(b/170333009): copied from ManagedProvisioning app, as they're hidden;
     private static final String PROVISION_FINALIZATION_INSIDE_SUW =
