@@ -35,6 +35,9 @@
     <!-- To start the new DPC provisioning workflow  -->
     <uses-permission android:name="android.permission.DISPATCH_PROVISIONING_MESSAGE"/>
 
+    <!-- To factory reset -->
+    <uses-permission android:name="android.permission.MASTER_CLEAR"/>
+
     <application android:label="@string/app_name">
 
         <activity android:name="DefaultActivity"

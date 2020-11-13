@@ -244,6 +244,8 @@ public final class DefaultActivity extends Activity {
     }
 
     private void sendFactoryResetIntent() {
+        provisionUserAndDevice();
+
         Intent intent = new Intent(Intent.ACTION_FACTORY_RESET);
         intent.setPackage("android");
         intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
@@ -251,6 +253,8 @@ public final class DefaultActivity extends Activity {
 
         Log.i(TAG, "factory resetting device with intent " + intent);
         sendBroadcast(intent);
+
+        disableSelfAndFinish();
     }
 
     private void provisionUserAndDevice() {
