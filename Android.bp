@@ -17,6 +17,7 @@ android_app {
     srcs: ["**/*.java"],
     libs: [
         "android.car-stubs",
+        "android.car-system-stubs",
     ],
     static_libs: [
         "car-setup-wizard-lib",
