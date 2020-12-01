@@ -45,6 +45,7 @@ import android.os.Bundle;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -152,7 +153,7 @@ public final class DefaultActivity extends Activity {
         mProvisioningWorkflowButton = findViewById(R.id.provision_workflow);
 
         mLegacyProvisioningWorkflowButton
-        .setOnClickListener((v) -> launchLegacyProvisioningWorkflow());
+                .setOnClickListener((v) -> launchLegacyProvisioningWorkflow());
         mProvisioningWorkflowButton.setOnClickListener((v) -> launchProvisioningWorkflow());
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
         mFactoryResetButton.setOnClickListener((v) -> factoryReset());
@@ -260,17 +261,52 @@ public final class DefaultActivity extends Activity {
     private void provisionUserAndDevice() {
         Log.d(TAG, "setting Settings properties");
         // Add a persistent setting to allow other apps to know the device has been provisioned.
-        Settings.Global.putInt(getContentResolver(), Settings.Global.DEVICE_PROVISIONED, 1);
-        Settings.Secure.putInt(getContentResolver(), Settings.Secure.USER_SETUP_COMPLETE, 1);
+        if (!isDeviceProvisioned()) {
+            Settings.Global.putInt(getContentResolver(), Settings.Global.DEVICE_PROVISIONED, 1);
+        }
+
+        maybeMarkSystemUserSetupComplete();
+        Log.v(TAG, "Marking USER_SETUP_COMPLETE for user " + getUserId());
+        markUserSetupComplete(this);
 
         // Set car-specific properties
         setCarSetupInProgress(false);
         Settings.Secure.putInt(getContentResolver(), KEY_ENABLE_INITIAL_NOTICE_SCREEN_TO_USER, 0);
     }
 
+    private boolean isDeviceProvisioned() {
+        try {
+            return Settings.Global.getInt(getContentResolver(),
+                    Settings.Global.DEVICE_PROVISIONED) == 1;
+        } catch (SettingNotFoundException e) {
+            Log.wtf(TAG, "DEVICE_PROVISIONED is not found.");
+            return false;
+        }
+    }
+
+    private boolean isUserSetupComplete(Context context) {
+        return Settings.Secure.getInt(context.getContentResolver(),
+                Settings.Secure.USER_SETUP_COMPLETE, /* default= */ 0) == 1;
+    }
+
+    private void maybeMarkSystemUserSetupComplete() {
+        Context systemUserContext = getApplicationContext().createContextAsUser(
+                UserHandle.SYSTEM, /* flags= */ 0);
+        if (!isUserSetupComplete(systemUserContext) && getUserId() != UserHandle.USER_SYSTEM
+                && UserManager.isHeadlessSystemUserMode()) {
+            Log.v(TAG, "Marking USER_SETUP_COMPLETE for system user");
+            markUserSetupComplete(systemUserContext);
+        }
+    }
+
     private void setCarSetupInProgress(boolean inProgress) {
         Settings.Secure.putInt(getContentResolver(), KEY_SETUP_WIZARD_IN_PROGRESS,
                 inProgress ? 1 : 0);
+    }
+
+    private void markUserSetupComplete(Context context) {
+        Settings.Secure.putInt(context.getContentResolver(),
+                Settings.Secure.USER_SETUP_COMPLETE, 1);
     }
 
     private void exitSetup() {
