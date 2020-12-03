@@ -30,6 +30,7 @@
     <string name="exited_setup_title" translatable="false">Setup Exited</string>
     <string name="exited_setup_content" translatable="false">Don\'t worry, this is just a friendly
     FYI, there\'s nothing to do, you are good to go.\nHave fun!</string>
+    <string name="select_dpc" translatable="false">Select DPC!\n</string>
     <string name="provision_failure_message" translatable="false">Device could not be provisioned!\n
     \nOn a production device, it should trigger a factory reset, but for development purposes, this
     Setup Wizard is not doing so.</string>
