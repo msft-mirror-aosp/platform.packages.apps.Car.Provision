@@ -41,6 +41,9 @@
     <!-- To set user_setup_complete for system user-->
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL"/>
 
+    <!-- To check if device is managed by a device owner -->
+    <uses-permission android:name="android.permission.MANAGE_USERS"/>
+
     <application android:label="@string/app_name">
 
         <activity android:name="DefaultActivity"
