@@ -47,7 +47,9 @@ import android.os.UserManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.android.car.setupwizardlib.util.CarDrivingStateMonitor;
@@ -63,7 +65,7 @@ import java.util.List;
  * <ul>
  *   <li>Shows UI where user can confirm setup.
  *   <li>Listen to UX restriction events, so it exits setup when the car moves.
- *   <li>Add option to setup manage-provision mode.
+ *   <li>Add option to setup managed-provisioning mode.
  *   <li>Sets car-specific properties.
  * </ul>
  */
@@ -87,16 +89,15 @@ public final class DefaultActivity extends Activity {
 
     private static final List<DpcInfo> sSupportedDpcApps = new ArrayList<>(2);
 
-    private static final String TEST_DPC_NAME = "TestDPC";
+    private static final String TEST_DPC_NAME = "TestDPC (downloadable)";
     private static final String TEST_DPC_PACKAGE = "com.afwsamples.testdpc";
     private static final String TEST_DPC_LEGACY_ACTIVITY = TEST_DPC_PACKAGE
             + ".SetupManagementLaunchActivity";
     private static final String TEST_DPC_RECEIVER = TEST_DPC_PACKAGE
             + ".DeviceAdminReceiver";
-    private static final String LOCAL_TEST_DPC_NAME = "LocalTestDPC";
+    private static final String LOCAL_TEST_DPC_NAME = "TestDPC (local only)";
 
     static {
-        // TODO(b/170333009): add a UI with multiple options once AAOS provides a CarTestDPC app.
         DpcInfo testDpc = new DpcInfo(TEST_DPC_NAME,
                 TEST_DPC_PACKAGE,
                 TEST_DPC_LEGACY_ACTIVITY,
@@ -110,8 +111,8 @@ public final class DefaultActivity extends Activity {
                 TEST_DPC_RECEIVER,
                 /* checkSum= */ null,
                 /* downloadUrl = */ null);
-        sSupportedDpcApps.add(localTestDpc);
         sSupportedDpcApps.add(testDpc);
+        sSupportedDpcApps.add(localTestDpc);
     }
 
     private CarDrivingStateMonitor mCarDrivingStateMonitor;
@@ -119,6 +120,7 @@ public final class DefaultActivity extends Activity {
     private TextView mErrorsTextView;
     private Button mFinishSetupButton;
     private Button mFactoryResetButton;
+    private Spinner mDpcAppsSpinner;
     private Button mLegacyProvisioningWorkflowButton;
     private Button mProvisioningWorkflowButton;
 
@@ -148,16 +150,17 @@ public final class DefaultActivity extends Activity {
         mErrorsTextView = findViewById(R.id.error_message);
         mFinishSetupButton = findViewById(R.id.finish_setup);
         mFactoryResetButton = findViewById(R.id.factory_reset);
+        mDpcAppsSpinner = findViewById(R.id.dpc_apps);
         mLegacyProvisioningWorkflowButton = findViewById(R.id.legacy_provision_workflow);
         mProvisioningWorkflowButton = findViewById(R.id.provision_workflow);
 
         mLegacyProvisioningWorkflowButton
-        .setOnClickListener((v) -> launchLegacyProvisioningWorkflow());
+                .setOnClickListener((v) -> launchLegacyProvisioningWorkflow());
         mProvisioningWorkflowButton.setOnClickListener((v) -> launchProvisioningWorkflow());
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
         mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
-        setMananagedProvisioning();
+        setManagedProvisioning();
         startMonitor();
     }
 
@@ -188,7 +191,15 @@ public final class DefaultActivity extends Activity {
         }
     }
 
-    private void setMananagedProvisioning() {
+    private void setManagedProvisioning() {
+        String[] appNames = new String[sSupportedDpcApps.size()];
+        for (int i = 0; i < sSupportedDpcApps.size(); i++) {
+            appNames[i] = sSupportedDpcApps.get(i).name;
+        }
+
+        mDpcAppsSpinner.setAdapter(new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, appNames));
+
         if (!getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_DEVICE_ADMIN)) {
             Log.i(TAG, "Disabling provisioning buttons because device does not have the "
@@ -298,8 +309,7 @@ public final class DefaultActivity extends Activity {
     }
 
     private DpcInfo getSelectedDpcInfo() {
-        // TODO(b/170333009): add a UI with multiple options once AAOS provides a CarTestDPC app.
-        return sSupportedDpcApps.get(0);
+        return sSupportedDpcApps.get(mDpcAppsSpinner.getSelectedItemPosition());
     }
 
     private void launchLegacyProvisioningWorkflow() {
