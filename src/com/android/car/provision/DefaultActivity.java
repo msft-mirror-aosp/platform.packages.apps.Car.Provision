@@ -45,6 +45,7 @@ import android.os.Bundle;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -140,6 +141,14 @@ public final class DefaultActivity extends Activity {
         Log.i(TAG, "onCreate() for user " + userId + " Intent: " + getIntent());
 
         if (userId == UserHandle.USER_SYSTEM && UserManager.isHeadlessSystemUserMode()) {
+            Log.i(TAG, "onCreate(): skipping UI on headless system user");
+            finishSetup();
+            return;
+        }
+
+        DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
+        if (dpm.isDeviceManaged()) {
+            Log.i(TAG, "onCreate(): skipping UI on managed device");
             finishSetup();
             return;
         }
@@ -160,7 +169,7 @@ public final class DefaultActivity extends Activity {
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
         mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
-        setManagedProvisioning();
+        setManagedProvisioning(dpm);
         startMonitor();
     }
 
@@ -191,7 +200,7 @@ public final class DefaultActivity extends Activity {
         }
     }
 
-    private void setManagedProvisioning() {
+    private void setManagedProvisioning(DevicePolicyManager dpm) {
         String[] appNames = new String[sSupportedDpcApps.size()];
         for (int i = 0; i < sSupportedDpcApps.size(); i++) {
             appNames[i] = sSupportedDpcApps.get(i).name;
@@ -206,7 +215,6 @@ public final class DefaultActivity extends Activity {
                     + PackageManager.FEATURE_DEVICE_ADMIN + " feature");
             return;
         }
-        DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
         if (!dpm.isProvisioningAllowed(DevicePolicyManager.ACTION_PROVISION_MANAGED_DEVICE)) {
             Log.w(TAG, "Disabling provisioning buttons because device cannot be provisioned - "
                     + "it can only be set on first boot");
@@ -271,17 +279,52 @@ public final class DefaultActivity extends Activity {
     private void provisionUserAndDevice() {
         Log.d(TAG, "setting Settings properties");
         // Add a persistent setting to allow other apps to know the device has been provisioned.
-        Settings.Global.putInt(getContentResolver(), Settings.Global.DEVICE_PROVISIONED, 1);
-        Settings.Secure.putInt(getContentResolver(), Settings.Secure.USER_SETUP_COMPLETE, 1);
+        if (!isDeviceProvisioned()) {
+            Settings.Global.putInt(getContentResolver(), Settings.Global.DEVICE_PROVISIONED, 1);
+        }
+
+        maybeMarkSystemUserSetupComplete();
+        Log.v(TAG, "Marking USER_SETUP_COMPLETE for user " + getUserId());
+        markUserSetupComplete(this);
 
         // Set car-specific properties
         setCarSetupInProgress(false);
         Settings.Secure.putInt(getContentResolver(), KEY_ENABLE_INITIAL_NOTICE_SCREEN_TO_USER, 0);
     }
 
+    private boolean isDeviceProvisioned() {
+        try {
+            return Settings.Global.getInt(getContentResolver(),
+                    Settings.Global.DEVICE_PROVISIONED) == 1;
+        } catch (SettingNotFoundException e) {
+            Log.wtf(TAG, "DEVICE_PROVISIONED is not found.");
+            return false;
+        }
+    }
+
+    private boolean isUserSetupComplete(Context context) {
+        return Settings.Secure.getInt(context.getContentResolver(),
+                Settings.Secure.USER_SETUP_COMPLETE, /* default= */ 0) == 1;
+    }
+
+    private void maybeMarkSystemUserSetupComplete() {
+        Context systemUserContext = getApplicationContext().createContextAsUser(
+                UserHandle.SYSTEM, /* flags= */ 0);
+        if (!isUserSetupComplete(systemUserContext) && getUserId() != UserHandle.USER_SYSTEM
+                && UserManager.isHeadlessSystemUserMode()) {
+            Log.v(TAG, "Marking USER_SETUP_COMPLETE for system user");
+            markUserSetupComplete(systemUserContext);
+        }
+    }
+
     private void setCarSetupInProgress(boolean inProgress) {
         Settings.Secure.putInt(getContentResolver(), KEY_SETUP_WIZARD_IN_PROGRESS,
                 inProgress ? 1 : 0);
+    }
+
+    private void markUserSetupComplete(Context context) {
+        Settings.Secure.putInt(context.getContentResolver(),
+                Settings.Secure.USER_SETUP_COMPLETE, 1);
     }
 
     private void exitSetup() {
