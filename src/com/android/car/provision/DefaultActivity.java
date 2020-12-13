@@ -141,6 +141,14 @@ public final class DefaultActivity extends Activity {
         Log.i(TAG, "onCreate() for user " + userId + " Intent: " + getIntent());
 
         if (userId == UserHandle.USER_SYSTEM && UserManager.isHeadlessSystemUserMode()) {
+            Log.i(TAG, "onCreate(): skipping UI on headless system user");
+            finishSetup();
+            return;
+        }
+
+        DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
+        if (dpm.isDeviceManaged()) {
+            Log.i(TAG, "onCreate(): skipping UI on managed device");
             finishSetup();
             return;
         }
@@ -161,7 +169,7 @@ public final class DefaultActivity extends Activity {
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
         mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
-        setManagedProvisioning();
+        setManagedProvisioning(dpm);
         startMonitor();
     }
 
@@ -192,7 +200,7 @@ public final class DefaultActivity extends Activity {
         }
     }
 
-    private void setManagedProvisioning() {
+    private void setManagedProvisioning(DevicePolicyManager dpm) {
         String[] appNames = new String[sSupportedDpcApps.size()];
         for (int i = 0; i < sSupportedDpcApps.size(); i++) {
             appNames[i] = sSupportedDpcApps.get(i).name;
@@ -207,7 +215,6 @@ public final class DefaultActivity extends Activity {
                     + PackageManager.FEATURE_DEVICE_ADMIN + " feature");
             return;
         }
-        DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
         if (!dpm.isProvisioningAllowed(DevicePolicyManager.ACTION_PROVISION_MANAGED_DEVICE)) {
             Log.w(TAG, "Disabling provisioning buttons because device cannot be provisioned - "
                     + "it can only be set on first boot");
