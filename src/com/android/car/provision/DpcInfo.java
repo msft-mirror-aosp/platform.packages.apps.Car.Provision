@@ -17,6 +17,8 @@ package com.android.car.provision;
 
 import android.content.ComponentName;
 
+import java.util.Objects;
+
 /**
  * Info about a Device Policy Controller app.
  */
@@ -31,10 +33,10 @@ final class DpcInfo {
 
     DpcInfo(String name, String packageName, String legacyActivityName,
             String receiverName, String checkSum, String downloadUrl) {
-        this.name = name;
-        this.packageName = packageName;
+        this.name = Objects.requireNonNull(name, "name cannot be null");
+        this.packageName = Objects.requireNonNull(packageName, "packageName cannot be null");
+        this.mReceiverName = Objects.requireNonNull(receiverName, "receiverName cannot be null");
         this.mLegacyActivityName = legacyActivityName;
-        this.mReceiverName = receiverName;
         this.checkSum = checkSum;
         this.downloadUrl = downloadUrl;
     }
