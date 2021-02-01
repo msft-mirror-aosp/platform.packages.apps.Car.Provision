@@ -55,6 +55,8 @@ import android.widget.TextView;
 
 import com.android.car.setupwizardlib.util.CarDrivingStateMonitor;
 
+import java.io.FileDescriptor;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -169,6 +171,7 @@ public final class DefaultActivity extends Activity {
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
         mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
+        updateUi();
         setManagedProvisioning(dpm);
         startMonitor();
     }
@@ -190,6 +193,82 @@ public final class DefaultActivity extends Activity {
         super.finish();
     };
 
+    @Override
+    public void dump(String prefix, FileDescriptor fd, PrintWriter pw, String[] args) {
+        if (args == null || args.length == 0) {
+            showDpcs(pw);
+            showHelp(pw);
+            return;
+        }
+
+        if (args[0].equals("--help")) {
+            showHelp(pw);
+            return;
+        }
+
+        addDpc(pw, args);
+    };
+
+    private void showDpcs(PrintWriter pw) {
+        pw.printf("%d DPCs\n", sSupportedDpcApps.size());
+        sSupportedDpcApps.forEach((dpc) -> pw.printf("\t%s\n", dpc));
+    }
+
+    private void showHelp(PrintWriter pw) {
+        pw.println("\nTo add a new DPC, use: --name name --package-name package-name"
+                + "--receiver-name receiver-name [--legacy-activity-name legacy-activity-name] "
+                + "[--checksum checksum] [--download-url download-url]");
+    }
+
+    private void addDpc(PrintWriter pw, String[] args) {
+        String name = null;
+        String packageName = null;
+        String legacyActivityName = null;
+        String receiverName = null;
+        String checkSum = null;
+        String downloadUrl = null;
+
+        for (int i = 0; i < args.length; i++) {
+            try {
+                switch (args[i]) {
+                    case "--name":
+                        name = args[++i];
+                        break;
+                    case "--package-name":
+                        packageName = args[++i];
+                        break;
+                    case "--legacy-activity-name":
+                        legacyActivityName = args[++i];
+                        break;
+                    case "--receiver-name":
+                        receiverName = args[++i];
+                        break;
+                    case "--checksum":
+                        checkSum = args[++i];
+                        break;
+                    case "--download-url":
+                        downloadUrl = args[++i];
+                        break;
+                    default:
+                        pw.printf("Invalid option at index %d: %s\n", i, args[i]);
+                        return;
+                }
+            } catch (Exception e) {
+                // most likely a missing arg...
+                pw.printf("Error handing arg %d: %s\n", i, e);
+                return;
+            }
+        }
+
+        DpcInfo dpc = new DpcInfo(name, packageName, legacyActivityName, receiverName, checkSum,
+                downloadUrl);
+        Log.i(TAG, "Adding new DPC from dump(): " + dpc);
+        sSupportedDpcApps.add(dpc);
+        pw.printf("Added new DPC: %s\n", dpc);
+
+        updateUi();
+    }
+
     private void stopMonitor() {
         if (mDrivingStateExitReceiver != null) {
             unregisterReceiver(mDrivingStateExitReceiver);
@@ -200,15 +279,17 @@ public final class DefaultActivity extends Activity {
         }
     }
 
-    private void setManagedProvisioning(DevicePolicyManager dpm) {
+    private void updateUi() {
         String[] appNames = new String[sSupportedDpcApps.size()];
         for (int i = 0; i < sSupportedDpcApps.size(); i++) {
             appNames[i] = sSupportedDpcApps.get(i).name;
         }
-
         mDpcAppsSpinner.setAdapter(new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, appNames));
+        mDpcAppsSpinner.setSelection(appNames.length - 1);
+    }
 
+    private void setManagedProvisioning(DevicePolicyManager dpm) {
         if (!getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_DEVICE_ADMIN)) {
             Log.i(TAG, "Disabling provisioning buttons because device does not have the "
