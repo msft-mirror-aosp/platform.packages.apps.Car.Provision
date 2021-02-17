@@ -177,6 +177,7 @@ public final class DefaultActivity extends Activity {
     }
 
     private void startMonitor() {
+        Log.d(TAG, "startMonitor()");
         registerReceiver(mDrivingStateExitReceiver,
                 new IntentFilter(CarDrivingStateMonitor.EXIT_BROADCAST_ACTION));
 
@@ -270,13 +271,20 @@ public final class DefaultActivity extends Activity {
     }
 
     private void stopMonitor() {
+        Log.d(TAG, "stopMonitor()");
+
+        if (mCarDrivingStateMonitor == null) {
+            // Happens when device is managed (and startMonitor() is skipped)
+            Log.d(TAG, "Already stopped (or never stopped)");
+            return;
+        }
+
         if (mDrivingStateExitReceiver != null) {
             unregisterReceiver(mDrivingStateExitReceiver);
         }
 
-        if (mCarDrivingStateMonitor != null) {
-            mCarDrivingStateMonitor.stopMonitor();
-        }
+        mCarDrivingStateMonitor.stopMonitor();
+        mCarDrivingStateMonitor = null;
     }
 
     private void updateUi() {
@@ -475,6 +483,8 @@ public final class DefaultActivity extends Activity {
     }
 
     private void disableSelfAndFinish() {
+        Log.d(TAG, "disableSelfAndFinish()");
+
         // Remove this activity from the package manager.
         PackageManager pm = getPackageManager();
         ComponentName name = new ComponentName(this, DefaultActivity.class);
