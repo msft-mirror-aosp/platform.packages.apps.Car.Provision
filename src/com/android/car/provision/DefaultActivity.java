@@ -143,8 +143,9 @@ public final class DefaultActivity extends Activity {
         Log.i(TAG, "onCreate() for user " + userId + " Intent: " + getIntent());
 
         if (userId == UserHandle.USER_SYSTEM && UserManager.isHeadlessSystemUserMode()) {
-            Log.i(TAG, "onCreate(): skipping UI on headless system user");
-            finishSetup();
+            // System user will be provisioned together with the first non-system user
+            Log.i(TAG, "onCreate(): skipping setup on headless system user");
+            disableSelfAndFinish();
             return;
         }
 
