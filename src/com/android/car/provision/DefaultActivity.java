@@ -42,6 +42,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
@@ -71,6 +72,22 @@ import java.util.List;
  *   <li>Add option to setup managed-provisioning mode.
  *   <li>Sets car-specific properties.
  * </ul>
+ *
+ * <p>By default, it doesn't show the UI, unless the {@code persist.dev.car_provision.show_ui}
+ * property is set to {@code true}. For example, you can change it by running something like:
+ <pre><code>
+     adb root
+     adb shell setprop persist.dev.car_provision.show_ui true && \
+     adb shell pm enable --user cur com.android.car.provision/.DefaultActivity &&\
+     adb shell settings put secure --user cur user_setup_complete 0 && \
+     adb shell settings put secure --user 0 user_setup_complete 0 &&\
+     adb shell settings put global device_provisioned 0 &&\
+     adb shell rm -f /data/system/device_policies_version &&\
+     adb shell rm -f /data/system/device_policies.xml &&\
+     adb shell rm -f /data/system/device_owner_2.xml ;\
+     adb shell rm -f /data/system/users/`adb shell am get-current-user`/profile_owner.xml
+     adb shell stop && adb shell start
+  <code></pre>
  */
 public final class DefaultActivity extends Activity {
 
@@ -99,6 +116,8 @@ public final class DefaultActivity extends Activity {
     private static final String TEST_DPC_RECEIVER = TEST_DPC_PACKAGE
             + ".DeviceAdminReceiver";
     private static final String LOCAL_TEST_DPC_NAME = "TestDPC (local only)";
+
+    private static final String SHOW_UI_SYSTEM_PROPERTY = "persist.dev.car_provision.show_ui";
 
     static {
         DpcInfo testDpc = new DpcInfo(TEST_DPC_NAME,
@@ -149,6 +168,13 @@ public final class DefaultActivity extends Activity {
             return;
         }
 
+        if (!showUi()) {
+            Log.w(TAG, "onCreate(): skipping UI because " + SHOW_UI_SYSTEM_PROPERTY
+                    + " was not set to true");
+            finishSetup();
+            return;
+        }
+
         DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
         if (dpm.isDeviceManaged()) {
             Log.i(TAG, "onCreate(): skipping UI on managed device");
@@ -175,6 +201,16 @@ public final class DefaultActivity extends Activity {
         updateUi();
         setManagedProvisioning(dpm);
         startMonitor();
+    }
+
+    private boolean showUi() {
+        boolean result = false;
+        try {
+            result = SystemProperties.getBoolean(SHOW_UI_SYSTEM_PROPERTY, false);
+        } catch (Exception e) {
+            Log.w(TAG, "error getting property " + SHOW_UI_SYSTEM_PROPERTY);
+        }
+        return result;
     }
 
     private void startMonitor() {
