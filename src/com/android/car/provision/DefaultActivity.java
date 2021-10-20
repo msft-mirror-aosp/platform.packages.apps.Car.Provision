@@ -48,6 +48,8 @@ import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
@@ -172,6 +174,7 @@ public final class DefaultActivity extends Activity {
         mFinishSetupButton.setOnClickListener((v) -> finishSetup());
         mFactoryResetButton.setOnClickListener((v) -> factoryReset());
 
+        hideSystemUi();
         updateUi();
         setManagedProvisioning(dpm);
         startMonitor();
@@ -286,6 +289,17 @@ public final class DefaultActivity extends Activity {
 
         mCarDrivingStateMonitor.stopMonitor();
         mCarDrivingStateMonitor = null;
+    }
+
+    private void hideSystemUi() {
+        WindowInsetsController insetsController = getWindow().getDecorView()
+                .getWindowInsetsController();
+        if (insetsController == null) {
+            Log.w(TAG, "No insets controller");
+            return;
+        }
+        Log.d(TAG, "Hiding the system UI bars");
+        insetsController.hide(WindowInsets.Type.navigationBars());
     }
 
     private void updateUi() {
